@@ -1,6 +1,7 @@
 import { createInterface } from "readline";
 import * as path from "node:path";
 import * as fs from "node:fs";
+import { spawn } from "node:child_process";
 
 const rl = createInterface({
   input: process.stdin,
@@ -53,12 +54,15 @@ const KNOWN_CMDS: Record<string, (str: string) => void> = {
       }
     }
   },
+
   'invalidCmd': (cmd: string) => console.log(`${cmd}: command not found`),
 };
 
 rl.on("line", (command) => {
-  const [cmd, ...input] = command.split(' ');
-  const inputString = input.join(' ');
+  const parts = command.trim().split(/\s+/);
+  const cmd = parts[0];
+  const args = parts.slice(1);
+  const inputString = args.join(' ');
 
   if (command === "exit") {
     rl.close();
@@ -67,10 +71,20 @@ rl.on("line", (command) => {
 
   const ansFn = KNOWN_CMDS[cmd];
 
-  if (!ansFn) {
-    KNOWN_CMDS['invalidCmd'](command);
-  } else {
+  if (ansFn) {
     ansFn(inputString);
+  } else {
+    const matchPath = searchPath(cmd);
+    if (matchPath) {
+      const child = spawn(matchPath, args, { stdio: 'inherit' });
+
+      child.on("close", () => {
+        rl.prompt();
+      });
+    } else {
+      console.log(`${cmd}: command not found`);
+      rl.prompt();
+    }
   }
 
   rl.prompt();

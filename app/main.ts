@@ -22,38 +22,24 @@ function searchPath(command: string) {
   return folder ? folder + '/' + command : null;
 }
 
-const KNOWN_CMDS: Record<string, (str: string) => void> = {
-  'echo': (str: string) => console.log(str),
-  'type': (str: string): void => {
-    const builtins = ['echo', 'type', 'exit'];
+rl.on("line", (rawInput) => {
+  const line = rawInput.trim();
+  if (!line) {
+    rl.prompt();
+    return;
+  }
 
-    if (builtins.includes(str)) {
-      console.log(`${str} is a shell builtin`);
-    } else {
-      const matchPath = searchPath(str);
-      if (matchPath) {
-        console.log(`${str} is ${matchPath}`);
-      } else {
-        console.log(`${str}: not found`);
-      }
-    }
-  },
-
-  'invalidCmd': (cmd: string) => console.log(`${cmd}: command not found`),
-};
-
-rl.on("line", (command) => {
-  const parts = command.trim().split(/\s+/);
+  const parts = line.split(/\s+/);
   const cmd = parts[0];
   const args = parts.slice(1);
   const inputString = args.join(' ');
 
-  if (command === "exit") {
+  if (cmd === "exit") {
     rl.close();
     return;
-  } else if (command === "echo") {
+  } else if (cmd === "echo") {
     console.log(inputString);
-  } else if (command === "type") {
+  } else if (cmd === "type") {
     const builtins = ['echo', 'type', 'exit'];
 
     if (builtins.includes(inputString)) {
@@ -67,9 +53,9 @@ rl.on("line", (command) => {
       }
     }
   } else if (searchPath(cmd)) {
-    execSync(command, { stdio: 'inherit' });
+    execSync(line, { stdio: 'inherit' });
   } else {
-    console.log(`${command}: command not found`);
+    console.log(`${line}: command not found`);
   }
 
   rl.prompt();

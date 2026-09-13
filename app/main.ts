@@ -1,4 +1,6 @@
 import { createInterface } from "readline";
+import * as path from "node:path";
+import * as fs from "node:fs";
 
 const rl = createInterface({
   input: process.stdin,
@@ -8,13 +10,46 @@ const rl = createInterface({
 
 rl.prompt();
 
+function searchPath(extPath: string) {
+
+  const envPath = process.env.PATH || '';
+  const pathDirs = envPath.split(path.delimiter);
+
+  const extensions = process.platform === "win32" ? ['.exe', '.cmd', '.bat', ''] : [''];
+
+  for (const dir of pathDirs) {
+    for (const ext of extensions) {
+      const fullPath = path.join(dir + extPath + ext);
+
+      try {
+        if (fs.existsSync(fullPath)) {
+          const stats = fs.statSync(fullPath);
+          if (stats.isFile()) {
+            return fullPath;
+          }
+        }
+      } catch {
+      }
+    }
+  }
+
+  return null;
+}
+
 const KNOWN_CMDS: Record<string, (str: string) => void> = {
   'echo': (str: string) => console.log(str),
   'type': (str: string): void => {
-    if (KNOWN_CMDS[str] || str === 'exit') {
+    const builtinList = ['echo', 'type', 'exit'];
+
+    if (builtinList.includes(str)) {
       console.log(`${str} is a shell builtin`);
     } else {
-      console.log(`${str}: not found`);
+      const foundPath = searchPath(str)
+      if (foundPath) {
+        console.log(`${str} is ${foundPath}`);
+      } else {
+        console.log(`${str}: not found`);
+      }
     }
   },
   'invalidCmd': (cmd: string) => console.log(`${cmd}: command not found`),

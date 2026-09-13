@@ -10,10 +10,14 @@ const rl = createInterface({
 rl.prompt();
 
 rl.on("line", (command) => {
+  if (command === "exit") {
+    rl.close();
+    return;
+  }
+
   console.log(`${command}: command not found`);
   rl.prompt();
 })
 
-rl.on("close", () => process.exit())
 
 

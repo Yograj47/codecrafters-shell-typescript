@@ -25,6 +25,7 @@ function searchPath(extPath: string) {
         if (fs.existsSync(fullPath)) {
           const stats = fs.statSync(fullPath);
           if (stats.isFile()) {
+            fs.accessSync(fullPath, fs.constants.X_OK);
             return fullPath;
           }
         }

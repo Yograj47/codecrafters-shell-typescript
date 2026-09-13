@@ -19,7 +19,7 @@ function searchPath(extPath: string) {
 
   for (const dir of pathDirs) {
     for (const ext of extensions) {
-      const fullPath = path.join(dir + extPath + ext);
+      const fullPath = path.join(dir, extPath + ext);
 
       try {
         if (fs.existsSync(fullPath)) {

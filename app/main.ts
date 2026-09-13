@@ -39,14 +39,14 @@ function searchPath(extPath: string) {
 const KNOWN_CMDS: Record<string, (str: string) => void> = {
   'echo': (str: string) => console.log(str),
   'type': (str: string): void => {
-    const builtinList = ['echo', 'type', 'exit'];
+    const builtins = ['echo', 'type', 'exit'];
 
-    if (builtinList.includes(str)) {
+    if (builtins.includes(str)) {
       console.log(`${str} is a shell builtin`);
     } else {
-      const foundPath = searchPath(str)
-      if (foundPath) {
-        console.log(`${str} is ${foundPath}`);
+      const matchPath = searchPath(str);
+      if (matchPath) {
+        console.log(`${str} is ${matchPath}`);
       } else {
         console.log(`${str}: not found`);
       }

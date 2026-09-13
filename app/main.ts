@@ -1,7 +1,7 @@
 import { createInterface } from "readline";
 import * as path from "node:path";
 import * as fs from "node:fs";
-import { execSync, spawn } from "node:child_process";
+import { execSync } from "node:child_process";
 
 const rl = createInterface({
   input: process.stdin,
@@ -69,7 +69,7 @@ rl.on("line", (command) => {
   } else if (searchPath(cmd)) {
     execSync(command, { stdio: 'inherit' });
   } else {
-    rl.write(`${command}: command not found\n`);
+    console.log(`${command}: command not found`);
   }
 
   rl.prompt();

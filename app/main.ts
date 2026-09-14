@@ -77,9 +77,9 @@ rl.on("line", (rawInput) => {
       }
 
       try {
-        const stats = fs.statSync(inputString);
+        const stats = fs.statSync(targetPath);
         if (stats.isDirectory()) {
-          process.chdir(inputString);
+          process.chdir(targetPath);
         } else {
           console.log(`cd: ${inputString}: No such directory`);
         }

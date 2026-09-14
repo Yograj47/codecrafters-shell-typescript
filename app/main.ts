@@ -72,7 +72,8 @@ rl.on("line", (rawInput) => {
       let targetPath = inputString;
 
       if (targetPath === "~" || targetPath.startsWith("~/")) {
-        targetPath = path.join(os.homedir(), targetPath.slice(1));
+        const homedir = process.env.HOME || os.homedir();
+        targetPath = path.join(homedir, targetPath.slice(1));
       }
 
       try {

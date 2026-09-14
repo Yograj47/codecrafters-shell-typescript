@@ -73,9 +73,10 @@ rl.on("line", (rawInput) => {
         if (stats.isDirectory()) {
           process.chdir(inputString);
         } else {
-          console.log(`cd: ${inputString}: No such file or directory`);
+          console.log(`cd: ${inputString}: No such directory`);
         }
       } catch {
+        console.log(`cd: ${inputString}: No such file or directory`);
       }
       break;
     }

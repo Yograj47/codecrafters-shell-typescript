@@ -2,6 +2,7 @@ import { createInterface } from "readline";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { execSync } from "node:child_process";
+import * as os from "node:os";
 
 const rl = createInterface({
   input: process.stdin,
@@ -68,6 +69,12 @@ rl.on("line", (rawInput) => {
     }
 
     case "cd": {
+      let targetPath = inputString;
+
+      if (targetPath === "~" || targetPath.startsWith("~/")) {
+        targetPath = path.join(os.homedir(), targetPath.slice(1));
+      }
+
       try {
         const stats = fs.statSync(inputString);
         if (stats.isDirectory()) {

@@ -11,15 +11,20 @@ const rl = createInterface({
 
 rl.prompt();
 
-function searchPath(command: string) {
+function searchPath(command: string): string | null {
+  const pathEnv = process.env.PATH || "";
+  const folder = pathEnv.split(path.delimiter).find((dir) => {
+    const fullPath = path.join(dir, command);
+    try {
+      if (!fs.existsSync(fullPath)) return false;
+      const stats = fs.statSync(fullPath);
+      return !!(fs.constants.X_OK & stats.mode);
+    } catch {
+      return false;
+    }
+  });
 
-  const folder = process.env.PATH?.split(path.delimiter).find((path) => {
-    if (!fs.existsSync(path + '/' + command)) return false
-    if (!(fs.constants.X_OK & fs.statSync(path + '/' + command).mode)) return false
-    return true
-  })
-
-  return folder ? folder + '/' + command : null;
+  return folder ? path.join(folder, command) : null;
 }
 
 rl.on("line", (rawInput) => {
@@ -32,32 +37,60 @@ rl.on("line", (rawInput) => {
   const parts = line.split(/\s+/);
   const cmd = parts[0];
   const args = parts.slice(1);
-  const inputString = args.join(' ');
+  const inputString = args.join(" ");
 
-  if (cmd === "exit") {
-    rl.close();
-    return;
-  } else if (cmd === "echo") {
-    console.log(inputString);
-  } else if (cmd === "pwd") {
-    console.log(process.cwd());
-  }
-  else if (cmd === "type") {
-    const builtins = ['echo', 'type', 'pwd', 'exit'];
-    if (builtins.includes(inputString)) {
-      console.log(`${inputString} is a shell builtin`);
-    } else {
-      const matchPath = searchPath(inputString);
-      if (matchPath) {
-        console.log(`${inputString} is ${matchPath}`);
+  switch (cmd) {
+    case "exit":
+      rl.close();
+      return;
+
+    case "echo":
+      console.log(inputString);
+      break;
+
+    case "pwd":
+      console.log(process.cwd());
+      break;
+
+    case "type": {
+      const builtins = ["echo", "type", "pwd", "exit", "cd"];
+      if (builtins.includes(inputString)) {
+        console.log(`${inputString} is a shell builtin`);
       } else {
-        console.log(`${inputString}: not found`);
+        const matchPath = searchPath(inputString);
+        if (matchPath) {
+          console.log(`${inputString} is ${matchPath}`);
+        } else {
+          console.log(`${inputString}: not found`);
+        }
       }
+      break;
     }
-  } else if (searchPath(cmd)) {
-    execSync(line, { stdio: 'inherit' });
-  } else {
-    console.log(`${line}: command not found`);
+
+    case "cd": {
+      if (!inputString) break;
+      try {
+        const stats = fs.statSync(inputString);
+        if (stats.isDirectory()) {
+          process.chdir(inputString);
+        } else {
+          console.log(`cd: ${inputString}: No such file or directory`);
+        }
+      } catch {
+      }
+      break;
+    }
+
+    default:
+      if (searchPath(cmd)) {
+        try {
+          execSync(line, { stdio: "inherit" });
+        } catch {
+        }
+      } else {
+        console.log(`${line}: command not found`);
+      }
+      break;
   }
 
   rl.prompt();

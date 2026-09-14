@@ -68,15 +68,11 @@ rl.on("line", (rawInput) => {
     }
 
     case "cd": {
-      if (!inputString) break;
-      try {
-        const stats = fs.statSync(inputString);
-        if (stats.isDirectory()) {
-          process.chdir(inputString);
-        } else {
-          console.log(`cd: ${inputString}: No such file or directory`);
-        }
-      } catch {
+      const stats = fs.statSync(inputString);
+      if (stats.isDirectory()) {
+        process.chdir(inputString);
+      } else {
+        console.log(`cd: ${inputString}: No such file or directory`);
       }
       break;
     }

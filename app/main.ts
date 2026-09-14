@@ -43,7 +43,7 @@ rl.on("line", (rawInput) => {
     console.log(process.cwd());
   }
   else if (cmd === "type") {
-    const builtins = ['echo', 'type', 'exit'];
+    const builtins = ['echo', 'type', 'pwd', 'exit'];
     if (builtins.includes(inputString)) {
       console.log(`${inputString} is a shell builtin`);
     } else {

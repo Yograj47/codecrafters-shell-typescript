@@ -43,19 +43,22 @@ function parseToken(line: string) {
         const nextChar = line[i + 1];
 
         if (inDoubleQuote) {
-          if (nextChar === '"' || nextChar === '//') {
+          if (nextChar === '"' || nextChar === '\\') {
             i++;
             currentArg += nextChar;
           } else {
             currentArg += char;
           }
-        } else {
+        }
+        else {
           i++
           currentArg += nextChar;
         }
-      } else {
+      }
+      else {
         currentArg += char;
       }
+
     } else if (char === "'") {
       if (!inDoubleQuote) {
         inSingleQuote = !inSingleQuote;

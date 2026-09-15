@@ -37,7 +37,12 @@ function parseToken(line: string) {
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
 
-    if (char === "'") {
+    if (char === '\\' && !inSingleQuote && !inDoubleQuote) {
+      if (i + 1 < line.length) {
+        i++;
+        currentArg += line[i]; // 
+      }
+    } else if (char === "'") {
       if (!inDoubleQuote) {
         inSingleQuote = !inSingleQuote;
       } else {

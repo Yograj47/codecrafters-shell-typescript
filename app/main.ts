@@ -62,7 +62,15 @@ function parseToken(line: string) {
       } else {
         currentArg += char;
       }
-    } else if (/\s/.test(char) && !inSingleQuote && !inDoubleQuote) {
+    }
+    else if (char === '"') {
+      if (!inSingleQuote) {
+        inDoubleQuote = !inDoubleQuote;
+      } else {
+        currentArg += char;
+      }
+    }
+    else if (/\s/.test(char) && !inSingleQuote && !inDoubleQuote) {
       if (currentArg.length > 0) {
         tokens.push(currentArg);
         currentArg = "";

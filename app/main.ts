@@ -28,6 +28,34 @@ function searchPath(command: string): string | null {
   return folder ? path.join(folder, command) : null;
 }
 
+function parseToken(line: string) {
+  const tokens: string[] = [];
+  let currentArg = "";
+  let inSingleQuote = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === "'") {
+      inSingleQuote = !inSingleQuote
+    } else if (/\s/.test(char) && !inSingleQuote) {
+      if (currentArg.length > 0) {
+        tokens.push(currentArg);
+        currentArg = "";
+      }
+    }
+    else {
+      currentArg += char;
+    }
+  }
+
+  if (currentArg.length > 0) {
+    tokens.push(currentArg);
+  }
+
+  return tokens;
+}
+
 rl.on("line", (rawInput) => {
   const line = rawInput.trim();
   if (!line) {
@@ -35,9 +63,9 @@ rl.on("line", (rawInput) => {
     return;
   }
 
-  const parts = line.split(/\s+/);
-  const cmd = parts[0];
-  const args = parts.slice(1);
+  const tokens = parseToken(line);
+  const cmd = tokens[0];
+  const args = tokens.slice(1);
   const inputString = args.join(" ");
 
   switch (cmd) {

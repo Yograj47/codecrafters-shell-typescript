@@ -2,7 +2,7 @@ import { createInterface } from "node:readline";
 import { parseToken } from "./utils/tokenizer";
 import { parseRedirections } from "./utils/redirection";
 import { searchPath } from "./services/pathResolver";
-import { executeExternal } from "./services/commandExecutor";
+import { executeExternal, prepareRedirectionFiles } from "./services/commandExecutor";
 import { handleEcho, handleType, handleCd } from "./commands/builtins";
 
 const rl = createInterface({
@@ -26,6 +26,8 @@ rl.on("line", (rawInput) => {
   // 2. Separate command args from redirection flags (> and 2>)
   const cmd = rawTokens[0];
   const redirectionInfo = parseRedirections(rawTokens.slice(1));
+
+  prepareRedirectionFiles(redirectionInfo);
 
   switch (cmd) {
     case "exit":

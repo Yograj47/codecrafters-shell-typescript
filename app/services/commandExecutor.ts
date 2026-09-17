@@ -30,3 +30,18 @@ export function executeExternal(
         if (typeof stderrFd === "number") fs.closeSync(stderrFd);
     }
 }
+
+export function prepareRedirectionFiles(redirection: RedirectionInfo): void {
+    if (redirection.stdoutFile) {
+        fs.mkdirSync(path.dirname(redirection.stdoutFile), { recursive: true });
+        if (!fs.existsSync(redirection.stdoutFile)) {
+            fs.writeFileSync(redirection.stdoutFile, "");
+        }
+    }
+    if (redirection.stderrFile) {
+        fs.mkdirSync(path.dirname(redirection.stderrFile), { recursive: true });
+        if (!fs.existsSync(redirection.stderrFile)) {
+            fs.writeFileSync(redirection.stderrFile, "");
+        }
+    }
+}

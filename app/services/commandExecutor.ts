@@ -5,43 +5,28 @@ import type { RedirectionInfo } from "../utils/redirection";
 
 export function executeExternal(
     cmd: string,
-    { cleanArgs, stdoutFile, stderrFile }: RedirectionInfo
+    { cleanArgs, stdout, stderr }: RedirectionInfo
 ): void {
     let stdoutFd: number | "inherit" = "inherit";
     let stderrFd: number | "inherit" = "inherit";
 
     try {
-        if (stdoutFile) {
-            fs.mkdirSync(path.dirname(stdoutFile), { recursive: true });
-            stdoutFd = fs.openSync(stdoutFile, "w");
+        if (stdout) {
+            fs.mkdirSync(path.dirname(stdout.file), { recursive: true });
+            stdoutFd = fs.openSync(stdout.file, stdout.mode);
         }
-        if (stderrFile) {
-            fs.mkdirSync(path.dirname(stderrFile), { recursive: true });
-            stderrFd = fs.openSync(stderrFile, "w");
+        if (stderr) {
+            fs.mkdirSync(path.dirname(stderr.file), { recursive: true });
+            stderrFd = fs.openSync(stderr.file, stderr.mode);
         }
 
         execFileSync(cmd, cleanArgs, {
             stdio: ["inherit", stdoutFd, stderrFd],
         });
     } catch {
-        // Process exited with error code (e.g., cat nonexistent); stderr is written to file automatically
+        // Process error output is written automatically to stderrFd
     } finally {
         if (typeof stdoutFd === "number") fs.closeSync(stdoutFd);
         if (typeof stderrFd === "number") fs.closeSync(stderrFd);
-    }
-}
-
-export function prepareRedirectionFiles(redirection: RedirectionInfo): void {
-    if (redirection.stdoutFile) {
-        fs.mkdirSync(path.dirname(redirection.stdoutFile), { recursive: true });
-        if (!fs.existsSync(redirection.stdoutFile)) {
-            fs.writeFileSync(redirection.stdoutFile, "");
-        }
-    }
-    if (redirection.stderrFile) {
-        fs.mkdirSync(path.dirname(redirection.stderrFile), { recursive: true });
-        if (!fs.existsSync(redirection.stderrFile)) {
-            fs.writeFileSync(redirection.stderrFile, "");
-        }
     }
 }

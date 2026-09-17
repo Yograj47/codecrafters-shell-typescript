@@ -2,14 +2,19 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { searchPath } from "../services/pathResolver";
+import type { RedirectionTarget } from "../utils/redirection";
 
 export const BUILTIN_COMMANDS = ["echo", "type", "pwd", "exit", "cd"] as const;
 
-export function handleEcho(cleanArgs: string[], stdoutFile?: string): void {
+export function handleEcho(cleanArgs: string[], stdout?: RedirectionTarget): void {
     const textToPrint = cleanArgs.join(" ") + "\n";
 
-    if (stdoutFile) {
-        fs.writeFileSync(stdoutFile, textToPrint);
+    if (stdout) {
+        if (stdout.mode === "a") {
+            fs.appendFileSync(stdout.file, textToPrint);
+        } else {
+            fs.writeFileSync(stdout.file, textToPrint);
+        }
     } else {
         process.stdout.write(textToPrint);
     }

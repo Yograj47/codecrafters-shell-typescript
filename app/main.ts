@@ -1,8 +1,8 @@
 import { createInterface } from "node:readline";
 import { parseToken } from "./utils/tokenizer";
-import { parseRedirections } from "./utils/redirection";
+import { parseRedirections, prepareRedirectionFiles } from "./utils/redirection";
 import { searchPath } from "./services/pathResolver";
-import { executeExternal, prepareRedirectionFiles } from "./services/commandExecutor";
+import { executeExternal } from "./services/commandExecutor";
 import { handleEcho, handleType, handleCd } from "./commands/builtins";
 
 const rl = createInterface({
@@ -35,7 +35,7 @@ rl.on("line", (rawInput) => {
       return;
 
     case "echo":
-      handleEcho(redirectionInfo.cleanArgs, redirectionInfo.stdoutFile);
+      handleEcho(redirectionInfo.cleanArgs, redirectionInfo.stdout);
       break;
 
     case "pwd":

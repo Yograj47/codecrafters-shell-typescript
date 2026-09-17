@@ -171,16 +171,32 @@ rl.on("line", (rawInput) => {
       break;
     }
 
-    default:
-      if (searchPath(cmd)) {
+    default: {
+      const errRedirectIndex = tokens.indexOf("2>");
+      let errorFilePath = null;
+      let commandTokens = tokens;
+
+      if (errRedirectIndex !== -1) {
+        errorFilePath = tokens[errRedirectIndex + 1];
+        commandTokens = tokens.slice(0, errRedirectIndex);
+      }
+
+      const cleanLine = commandTokens.join(" ");
+      const actualCmd = commandTokens[0];
+
+      if (searchPath(actualCmd)) {
         try {
-          execSync(line, { stdio: "inherit" });
-        } catch {
+          execSync(cleanLine, { stdio: "inherit" });
+        } catch (error: any) {
+          if (errorFilePath) {
+            fs.writeFileSync(errorFilePath, error.stderr);
+          }
         }
       } else {
         console.log(`${line}: command not found`);
       }
       break;
+    }
   }
 
   rl.prompt();

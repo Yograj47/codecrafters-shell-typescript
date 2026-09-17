@@ -108,10 +108,10 @@ rl.on("line", (rawInput) => {
       rl.close();
       return;
 
-    case "echo":
+    case "echo": {
       let redirectIndex = args.indexOf(">");
       if (redirectIndex === -1) {
-        redirectIndex = args.indexOf("1>")
+        redirectIndex = args.indexOf("1>");
       }
 
       if (redirectIndex !== -1) {
@@ -126,10 +126,11 @@ rl.on("line", (rawInput) => {
         } else {
           console.log("echo: syntax error near unexpected token 'newline'");
         }
+      } else {
+        console.log(inputString);
       }
-      console.log(inputString);
       break;
-
+    }
     case "pwd":
       console.log(process.cwd());
       break;

@@ -109,6 +109,24 @@ rl.on("line", (rawInput) => {
       return;
 
     case "echo":
+      let redirectIndex = args.indexOf(">");
+      if (redirectIndex === -1) {
+        redirectIndex === -1
+      }
+
+      if (redirectIndex !== -1) {
+        const textToPrint = args.slice(0, redirectIndex).join(" ");
+        const filePath = args[redirectIndex + 1];
+
+        if (filePath) {
+          try {
+            fs.writeFileSync(filePath, textToPrint + "\n");
+          } catch {
+          }
+        } else {
+          console.log("echo: syntax error near unexpected token 'newline'");
+        }
+      }
       console.log(inputString);
       break;
 

@@ -111,7 +111,7 @@ rl.on("line", (rawInput) => {
     case "echo":
       let redirectIndex = args.indexOf(">");
       if (redirectIndex === -1) {
-        redirectIndex === -1
+        redirectIndex === args.indexOf("1>")
       }
 
       if (redirectIndex !== -1) {

@@ -4,11 +4,13 @@ import { parseRedirections, prepareRedirectionFiles } from "./utils/redirection"
 import { searchPath } from "./services/pathResolver";
 import { executeExternal } from "./services/commandExecutor";
 import { handleEcho, handleType, handleCd } from "./commands/builtins";
+import { completer } from "./utils/completer";
 
 const rl = createInterface({
   input: process.stdin,
   output: process.stdout,
   prompt: "$ ",
+  completer: completer
 });
 
 rl.prompt();

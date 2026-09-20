@@ -42,7 +42,7 @@ export function completer(line: string): [string[], string] {
 
     const lcp = findLongestCommonPrefix(hits);
 
-    if (hits.length > line.length) {
+    if (lcp.length > line.length) {
         lastTabLine = "";
         return [[lcp], line];
     }

@@ -55,7 +55,17 @@ export function completer(line: string): [string[], string] {
             }
 
             if (hits.length === 1) {
-                const completedPath = commandPrefix + dirPart + hits[0] + " ";
+                const fullPath = path.join(targetDir, hits[0]);
+                let isDir = false;
+
+                try {
+                    isDir = fs.statSync(fullPath).isDirectory();
+                } catch {
+                    // Fallback if stat fails
+                }
+
+                const suffix = isDir ? "/" : " ";
+                const completedPath = commandPrefix + dirPart + hits[0] + suffix;
                 return [[completedPath], line];
             }
 

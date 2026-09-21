@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as process from "node:process";
+import * as path from "node:path";
 import { BUILTIN_COMMANDS } from "../commands/builtins.js";
 import { getExecutablesFromPath } from "../services/pathResolver.js";
 
@@ -25,9 +26,28 @@ export function completer(line: string): [string[], string] {
     if (lastSpaceIndex !== -1) {
         const commandPrefix = line.slice(0, lastSpaceIndex + 1);
         const argPrefix = line.slice(lastSpaceIndex + 1);
+
+        const lastSlashIndex = argPrefix.lastIndexOf("/");
+        let dirPart = "";
+        let filePrefix = argPrefix;
+
+
+        if (lastSlashIndex !== -1) {
+            dirPart = argPrefix.slice(0, lastSlashIndex + 1);
+            filePrefix = argPrefix.slice(lastSlashIndex + 1);
+        }
+
+        const targetDir = path.resolve(process.cwd(), dirPart);
+
         try {
-            const files = fs.readdirSync(process.cwd());
-            const hits = files.filter(f => f.startsWith(argPrefix)).sort();
+
+            if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) {
+                process.stdout.write("\x07");
+                return [[], line];
+            }
+
+            const files = fs.readdirSync(targetDir);
+            const hits = files.filter(f => f.startsWith(filePrefix)).sort();
 
             if (hits.length === 0) {
                 process.stdout.write("\x07");
@@ -35,14 +55,16 @@ export function completer(line: string): [string[], string] {
             }
 
             if (hits.length === 1) {
-                return [[commandPrefix + hits[0] + " "], line];
-            }
-            const lcp = findLongestCommonPrefix(hits);
-            if (lcp.length > argPrefix.length) {
-                return [[commandPrefix + lcp], line];
+                const completedPath = commandPrefix + dirPart + hits[0] + " ";
+                return [[completedPath], line];
             }
 
-            return [[commandPrefix + hits[0] + " "], line];
+            const lcp = findLongestCommonPrefix(hits);
+            if (lcp.length > filePrefix.length) {
+                return [[commandPrefix + dirPart + lcp], line];
+            }
+
+            return [[commandPrefix + dirPart + hits[0] + " "], line];
         } catch {
             process.stdout.write("\x07");
             return [[], line];

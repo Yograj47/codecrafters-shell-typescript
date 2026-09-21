@@ -20,8 +20,8 @@ function findLongestCommonPrefix(strings: string[]): string {
 }
 
 export function completer(line: string): [string[], string] {
-
     const lastSpaceIndex = line.lastIndexOf(" ");
+    const now = Date.now();
 
     if (lastSpaceIndex !== -1) {
         const commandPrefix = line.slice(0, lastSpaceIndex + 1);
@@ -55,6 +55,7 @@ export function completer(line: string): [string[], string] {
             }
 
             if (hits.length === 1) {
+                lastTabLine = "";
                 const fullPath = path.join(targetDir, hits[0]);
                 let isDir = false;
 
@@ -70,13 +71,40 @@ export function completer(line: string): [string[], string] {
             }
 
             const lcp = findLongestCommonPrefix(hits);
+
             if (lcp.length > filePrefix.length) {
+                lastTabLine = "";
                 return [[commandPrefix + dirPart + lcp], line];
             }
 
-            return [[commandPrefix + dirPart + hits[0] + " "], line];
+            const isSecondTab = line === lastTabLine && now - lastTabTime < 2000;
+
+            if (isSecondTab) {
+                const displayHits = hits.map((hit) => {
+                    const fullPath = path.join(targetDir, hit);
+                    try {
+                        if (fs.statSync(fullPath).isDirectory()) {
+                            return hit + "/";
+                        }
+                    } catch {
+                        // ignore
+                    }
+                    return hit;
+                });
+
+                process.stdout.write("\n" + displayHits.join("  ") + "\n");
+                process.stdout.write("$ " + line);
+                lastTabLine = "";
+                return [[], line];
+            } else {
+                process.stdout.write("\x07");
+                lastTabLine = line;
+                lastTabTime = now;
+                return [[], line];
+            }
         } catch {
             process.stdout.write("\x07");
+            lastTabLine = "";
             return [[], line];
         }
     }
@@ -89,8 +117,6 @@ export function completer(line: string): [string[], string] {
     const hits = Array.from(allCommands)
         .filter((cmd) => cmd.startsWith(line))
         .sort();
-
-    const now = Date.now();
 
     if (hits.length === 0) {
         process.stdout.write("\x07");

@@ -55,6 +55,11 @@ export function handleCd(targetPath: string): void {
 }
 
 export function handleComplete(args: string[]): void {
+    if (args[0] === "-p" && args[1]) {
+        const commandName = args[1];
+        console.log(`complete: ${commandName}: no completion specification`);
+        return;
+    }
 }
 
 export function printError(message: string, stderrFile?: string): void {

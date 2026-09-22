@@ -3,7 +3,7 @@ import { parseToken } from "./utils/tokenizer";
 import { parseRedirections, prepareRedirectionFiles } from "./utils/redirection";
 import { searchPath } from "./services/pathResolver";
 import { executeExternal } from "./services/commandExecutor";
-import { handleEcho, handleType, handleCd } from "./commands/builtins";
+import { handleEcho, handleType, handleCd, handleComplete } from "./commands/builtins";
 import { completer } from "./utils/completer";
 
 const rl = createInterface({
@@ -50,6 +50,10 @@ rl.on("line", (rawInput) => {
 
     case "cd":
       handleCd(redirectionInfo.cleanArgs[0] || "");
+      break;
+
+    case "complete":
+      handleComplete(redirectionInfo.cleanArgs);
       break;
 
     default:

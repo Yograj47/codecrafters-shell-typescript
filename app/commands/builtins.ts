@@ -4,7 +4,7 @@ import * as os from "node:os";
 import { searchPath } from "../services/pathResolver";
 import type { RedirectionTarget } from "../utils/redirection";
 
-export const BUILTIN_COMMANDS = ["echo", "type", "pwd", "exit", "cd"] as const;
+export const BUILTIN_COMMANDS = ["echo", "type", "pwd", "exit", "cd", "complete"] as const;
 
 export function handleEcho(cleanArgs: string[], stdout?: RedirectionTarget): void {
     const textToPrint = cleanArgs.join(" ") + "\n";
@@ -52,6 +52,9 @@ export function handleCd(targetPath: string): void {
     } catch {
         console.log(`cd: ${targetPath}: No such file or directory`);
     }
+}
+
+export function handleComplete(args: string[]): void {
 }
 
 export function printError(message: string, stderrFile?: string): void {

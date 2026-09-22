@@ -6,6 +6,8 @@ import type { RedirectionTarget } from "../utils/redirection";
 
 export const BUILTIN_COMMANDS = ["echo", "type", "pwd", "exit", "cd", "complete"] as const;
 
+const completionRegistry = new Map<string, string>();
+
 export function handleEcho(cleanArgs: string[], stdout?: RedirectionTarget): void {
     const textToPrint = cleanArgs.join(" ") + "\n";
 
@@ -55,9 +57,22 @@ export function handleCd(targetPath: string): void {
 }
 
 export function handleComplete(args: string[]): void {
-    if (args[0] === "-p" && args[1]) {
+    if (args.length >= 3 && args[0] === "-C") {
+        const scriptPath = args[1];
+        const commandName = args[2];
+        completionRegistry.set(commandName, scriptPath);
+        return;
+    }
+
+    if (args.length >= 2 && args[0] === "-p") {
         const commandName = args[1];
-        console.log(`complete: ${commandName}: no completion specification`);
+        const scriptPath = completionRegistry.get(commandName);
+
+        if (scriptPath) {
+            console.log(`complete -C '${scriptPath}' ${commandName}`);
+        } else {
+            console.log(`complete: ${commandName}: no completion specification`);
+        }
         return;
     }
 }

@@ -46,6 +46,11 @@ export function completer(line: string): [string[], string] {
                 const stdout = execFileSync(registeredScript, [cmdName, currentWord, prevWord], {
                     encoding: "utf-8",
                     stdio: ["ignore", "pipe", "ignore"],
+                    env: {
+                        ...process.env,
+                        COMP_LINE: line,
+                        COMP_POINT: Buffer.byteLength(line, "utf-8").toString(),
+                    },
                 });
 
                 const lines = stdout
@@ -63,7 +68,6 @@ export function completer(line: string): [string[], string] {
                 return [[], line];
             }
         }
-
         // ------------------------------------------
         // 1B. Fallback to Default Filesystem Completion
         // ------------------------------------------

@@ -64,6 +64,12 @@ export function handleComplete(args: string[]): void {
         return;
     }
 
+    if (args.length >= 2 && args[0] === "-r") {
+        const commandName = args[1];
+        completionRegistry.delete(commandName);
+        return;
+    }
+
     if (args.length >= 2 && args[0] === "-p") {
         const commandName = args[1];
         const scriptPath = completionRegistry.get(commandName);

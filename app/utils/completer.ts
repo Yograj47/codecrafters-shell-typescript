@@ -24,21 +24,19 @@ export function completer(line: string): [string[], string] {
     const lastSpaceIndex = line.lastIndexOf(" ");
     const now = Date.now();
 
+    // ==========================================
     // CASE 1: Argument Completion
+    // ==========================================
     if (lastSpaceIndex !== -1) {
-        const words = line.trimStart().split(/\s+/);
-        const firstWord = words[0];
+        const firstWord = line.trimStart().split(" ")[0];
         const registeredScript = completionRegistry.get(firstWord);
 
-        // Registered Completer Script
+        // ------------------------------------------
+        // 1A. Registered Completer Script Execution
+        // ------------------------------------------
         if (registeredScript) {
-            const currentWord = line.endsWith(" ") ? "" : words[words.length - 1] || "";
-            const prevWord = line.endsWith(" ")
-                ? words[words.length - 1] || ""
-                : words[words.length - 2] || "";
-
             try {
-                const stdout = execFileSync(registeredScript, [firstWord, currentWord, prevWord], {
+                const stdout = execFileSync(registeredScript, {
                     encoding: "utf-8",
                     stdio: ["ignore", "pipe", "ignore"],
                 });
@@ -49,23 +47,19 @@ export function completer(line: string): [string[], string] {
                     .filter((l) => l.length > 0);
 
                 if (lines.length === 1) {
+                    // Single match -> complete line with trailing space
                     const commandPrefix = line.slice(0, lastSpaceIndex + 1);
                     return [[commandPrefix + lines[0] + " "], line];
                 }
-
-                if (lines.length > 1) {
-                    return [lines, currentWord];
-                }
-
-                process.stdout.write("\x07");
-                return [[], line];
             } catch {
                 process.stdout.write("\x07");
                 return [[], line];
             }
         }
 
-        // Filesystem Completion
+        // ------------------------------------------
+        // 1B. Fallback to Default Filesystem Completion
+        // ------------------------------------------
         const commandPrefix = line.slice(0, lastSpaceIndex + 1);
         const argPrefix = line.slice(lastSpaceIndex + 1);
 
@@ -82,6 +76,8 @@ export function completer(line: string): [string[], string] {
 
         try {
             if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) {
+                process.stdout.write("\x07");
+                lastTabLine = "";
                 return [[], line];
             }
 
@@ -89,31 +85,42 @@ export function completer(line: string): [string[], string] {
             const hits = files.filter((f) => f.startsWith(filePrefix)).sort();
 
             if (hits.length === 0) {
+                process.stdout.write("\x07");
+                lastTabLine = "";
                 return [[], line];
             }
 
             if (hits.length === 1) {
+                lastTabLine = "";
                 const fullPath = path.join(targetDir, hits[0]);
                 let isDir = false;
                 try {
                     isDir = fs.statSync(fullPath).isDirectory();
-                } catch { }
+                } catch {
+                    // ignore
+                }
                 const suffix = isDir ? "/" : " ";
                 return [[commandPrefix + dirPart + hits[0] + suffix], line];
             }
 
             const lcp = findLongestCommonPrefix(hits);
             if (lcp.length > filePrefix.length) {
+                lastTabLine = "";
                 return [[commandPrefix + dirPart + lcp], line];
             }
 
-            // Handle Double TAB printing for hits
-            if (line === lastTabLine && now - lastTabTime < 500) {
+            const isSecondTab = line === lastTabLine && now - lastTabTime < 2000;
+
+            if (isSecondTab) {
                 const displayHits = hits.map((hit) => {
                     const fullPath = path.join(targetDir, hit);
                     try {
-                        if (fs.statSync(fullPath).isDirectory()) return hit + "/";
-                    } catch { }
+                        if (fs.statSync(fullPath).isDirectory()) {
+                            return hit + "/";
+                        }
+                    } catch {
+                        // ignore
+                    }
                     return hit;
                 });
 
@@ -121,18 +128,22 @@ export function completer(line: string): [string[], string] {
                 process.stdout.write("$ " + line);
                 lastTabLine = "";
                 return [[], line];
+            } else {
+                process.stdout.write("\x07");
+                lastTabLine = line;
+                lastTabTime = now;
+                return [[], line];
             }
-
-            process.stdout.write("\x07");
-            lastTabLine = line;
-            lastTabTime = now;
-            return [[], line];
         } catch {
+            process.stdout.write("\x07");
+            lastTabLine = "";
             return [[], line];
         }
     }
 
-    // CASE 2: Command Completion
+    // ==========================================
+    // CASE 2: Command Completion (Builtins + PATH)
+    // ==========================================
     const allCommands = new Set<string>([
         ...BUILTIN_COMMANDS,
         ...getExecutablesFromPath(),
@@ -143,25 +154,34 @@ export function completer(line: string): [string[], string] {
         .sort();
 
     if (hits.length === 0) {
-        return [[], line];
-    }
-
-    if (hits.length === 1) return [[hits[0] + " "], line];
-
-    const lcp = findLongestCommonPrefix(hits);
-    if (lcp.length > line.length) {
-        return [[lcp], line];
-    }
-
-    if (line === lastTabLine && now - lastTabTime < 500) {
-        process.stdout.write("\n" + hits.join("  ") + "\n");
-        process.stdout.write("$ " + line);
+        process.stdout.write("\x07");
         lastTabLine = "";
         return [[], line];
     }
 
-    process.stdout.write("\x07");
-    lastTabLine = line;
-    lastTabTime = now;
-    return [[], line];
+    if (hits.length === 1) {
+        lastTabLine = "";
+        return [[hits[0] + " "], line];
+    }
+
+    const lcp = findLongestCommonPrefix(hits);
+
+    if (lcp.length > line.length) {
+        lastTabLine = "";
+        return [[lcp], line];
+    }
+
+    const isSecondTab = line === lastTabLine && now - lastTabTime < 2000;
+
+    if (isSecondTab) {
+        process.stdout.write("\n" + hits.join("  ") + "\n");
+        process.stdout.write("$ " + line);
+        lastTabLine = "";
+        return [[], line];
+    } else {
+        process.stdout.write("\x07");
+        lastTabLine = line;
+        lastTabTime = now;
+        return [[], line];
+    }
 }

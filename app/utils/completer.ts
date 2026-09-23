@@ -38,7 +38,6 @@ export function completer(line: string): [string[], string] {
                 : words[words.length - 2] || "";
 
             try {
-                // Pass command, currentWord, and prevWord as ARGV[1], ARGV[2], ARGV[3]
                 const stdout = execFileSync(registeredScript, [firstWord, currentWord, prevWord], {
                     encoding: "utf-8",
                     stdio: ["ignore", "pipe", "ignore"],
@@ -57,7 +56,12 @@ export function completer(line: string): [string[], string] {
                 if (lines.length > 1) {
                     return [lines, currentWord];
                 }
+
+                // Bell trigger on empty completions
+                process.stdout.write("\x07");
+                return [[], line];
             } catch {
+                process.stdout.write("\x07");
                 return [[], line];
             }
         }
@@ -81,6 +85,7 @@ export function completer(line: string): [string[], string] {
 
         try {
             if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) {
+                process.stdout.write("\x07");
                 return [[], line];
             }
 
@@ -88,6 +93,7 @@ export function completer(line: string): [string[], string] {
             const hits = files.filter((f) => f.startsWith(filePrefix)).sort();
 
             if (hits.length === 0) {
+                process.stdout.write("\x07");
                 return [[], line];
             }
 
@@ -110,6 +116,7 @@ export function completer(line: string): [string[], string] {
 
             return [hits, argPrefix];
         } catch {
+            process.stdout.write("\x07");
             return [[], line];
         }
     }
@@ -126,7 +133,11 @@ export function completer(line: string): [string[], string] {
         .filter((cmd) => cmd.startsWith(line))
         .sort();
 
-    if (hits.length === 0) return [[], line];
+    if (hits.length === 0) {
+        process.stdout.write("\x07");
+        return [[], line];
+    }
+
     if (hits.length === 1) return [[hits[0] + " "], line];
 
     const lcp = findLongestCommonPrefix(hits);

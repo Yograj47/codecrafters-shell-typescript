@@ -5,9 +5,6 @@ import * as process from "node:process";
 import { BUILTIN_COMMANDS, completionRegistry } from "../commands/builtins.js";
 import { getExecutablesFromPath } from "../services/pathResolver.js";
 
-let lastTabLine = "";
-let lastTabTime = 0;
-
 function findLongestCommonPrefix(strings: string[]): string {
     if (strings.length === 0) return "";
     let prefix = strings[0];
@@ -22,17 +19,27 @@ function findLongestCommonPrefix(strings: string[]): string {
 
 export function completer(line: string): [string[], string] {
     const lastSpaceIndex = line.lastIndexOf(" ");
-    const now = Date.now();
 
+    // ==========================================
     // CASE 1: Argument Completion
+    // ==========================================
     if (lastSpaceIndex !== -1) {
-        const firstWord = line.trimStart().split(" ")[0];
+        const words = line.trimStart().split(/\s+/);
+        const firstWord = words[0];
         const registeredScript = completionRegistry.get(firstWord);
 
-        // 1A. Registered Completer
+        // ------------------------------------------
+        // 1A. Registered Completer Script Execution
+        // ------------------------------------------
         if (registeredScript) {
+            const currentWord = line.endsWith(" ") ? "" : words[words.length - 1] || "";
+            const prevWord = line.endsWith(" ")
+                ? words[words.length - 1] || ""
+                : words[words.length - 2] || "";
+
             try {
-                const stdout = execFileSync(registeredScript, {
+                // Pass command, currentWord, and prevWord as ARGV[1], ARGV[2], ARGV[3]
+                const stdout = execFileSync(registeredScript, [firstWord, currentWord, prevWord], {
                     encoding: "utf-8",
                     stdio: ["ignore", "pipe", "ignore"],
                 });
@@ -46,13 +53,18 @@ export function completer(line: string): [string[], string] {
                     const commandPrefix = line.slice(0, lastSpaceIndex + 1);
                     return [[commandPrefix + lines[0] + " "], line];
                 }
-                return [lines, line.slice(lastSpaceIndex + 1)];
+
+                if (lines.length > 1) {
+                    return [lines, currentWord];
+                }
             } catch {
                 return [[], line];
             }
         }
 
-        // 1B. Filesystem Completion
+        // ------------------------------------------
+        // 1B. Fallback to Filesystem Completion
+        // ------------------------------------------
         const commandPrefix = line.slice(0, lastSpaceIndex + 1);
         const argPrefix = line.slice(lastSpaceIndex + 1);
 
@@ -96,22 +108,15 @@ export function completer(line: string): [string[], string] {
                 return [[commandPrefix + dirPart + lcp], line];
             }
 
-            // Return matching hits for native readline pagination/display
-            const displayHits = hits.map((hit) => {
-                const fullPath = path.join(targetDir, hit);
-                try {
-                    if (fs.statSync(fullPath).isDirectory()) return hit + "/";
-                } catch { }
-                return hit;
-            });
-
-            return [displayHits, argPrefix];
+            return [hits, argPrefix];
         } catch {
             return [[], line];
         }
     }
 
-    // CASE 2: Command Completion
+    // ==========================================
+    // CASE 2: Command Completion (Builtins + PATH)
+    // ==========================================
     const allCommands = new Set<string>([
         ...BUILTIN_COMMANDS,
         ...getExecutablesFromPath(),
@@ -122,11 +127,12 @@ export function completer(line: string): [string[], string] {
         .sort();
 
     if (hits.length === 0) return [[], line];
-
     if (hits.length === 1) return [[hits[0] + " "], line];
 
     const lcp = findLongestCommonPrefix(hits);
-    if (lcp.length > line.length) return [[lcp], line];
+    if (lcp.length > line.length) {
+        return [[lcp], line];
+    }
 
     return [hits, line];
 }

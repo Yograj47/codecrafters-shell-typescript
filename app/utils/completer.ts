@@ -5,6 +5,9 @@ import * as process from "node:process";
 import { BUILTIN_COMMANDS, completionRegistry } from "../commands/builtins.js";
 import { getExecutablesFromPath } from "../services/pathResolver.js";
 
+let lastTabLine = "";
+let lastTabTime = 0;
+
 function findLongestCommonPrefix(strings: string[]): string {
     if (strings.length === 0) return "";
     let prefix = strings[0];
@@ -19,18 +22,15 @@ function findLongestCommonPrefix(strings: string[]): string {
 
 export function completer(line: string): [string[], string] {
     const lastSpaceIndex = line.lastIndexOf(" ");
+    const now = Date.now();
 
-    // ==========================================
     // CASE 1: Argument Completion
-    // ==========================================
     if (lastSpaceIndex !== -1) {
         const words = line.trimStart().split(/\s+/);
         const firstWord = words[0];
         const registeredScript = completionRegistry.get(firstWord);
 
-        // ------------------------------------------
-        // 1A. Registered Completer Script Execution
-        // ------------------------------------------
+        // Registered Completer Script
         if (registeredScript) {
             const currentWord = line.endsWith(" ") ? "" : words[words.length - 1] || "";
             const prevWord = line.endsWith(" ")
@@ -57,7 +57,6 @@ export function completer(line: string): [string[], string] {
                     return [lines, currentWord];
                 }
 
-                // Bell trigger on empty completions
                 process.stdout.write("\x07");
                 return [[], line];
             } catch {
@@ -66,9 +65,7 @@ export function completer(line: string): [string[], string] {
             }
         }
 
-        // ------------------------------------------
-        // 1B. Fallback to Filesystem Completion
-        // ------------------------------------------
+        // Filesystem Completion
         const commandPrefix = line.slice(0, lastSpaceIndex + 1);
         const argPrefix = line.slice(lastSpaceIndex + 1);
 
@@ -85,7 +82,6 @@ export function completer(line: string): [string[], string] {
 
         try {
             if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) {
-                process.stdout.write("\x07");
                 return [[], line];
             }
 
@@ -93,7 +89,6 @@ export function completer(line: string): [string[], string] {
             const hits = files.filter((f) => f.startsWith(filePrefix)).sort();
 
             if (hits.length === 0) {
-                process.stdout.write("\x07");
                 return [[], line];
             }
 
@@ -102,9 +97,7 @@ export function completer(line: string): [string[], string] {
                 let isDir = false;
                 try {
                     isDir = fs.statSync(fullPath).isDirectory();
-                } catch {
-                    // ignore
-                }
+                } catch { }
                 const suffix = isDir ? "/" : " ";
                 return [[commandPrefix + dirPart + hits[0] + suffix], line];
             }
@@ -114,16 +107,32 @@ export function completer(line: string): [string[], string] {
                 return [[commandPrefix + dirPart + lcp], line];
             }
 
-            return [hits, argPrefix];
-        } catch {
+            // Handle Double TAB printing for hits
+            if (line === lastTabLine && now - lastTabTime < 500) {
+                const displayHits = hits.map((hit) => {
+                    const fullPath = path.join(targetDir, hit);
+                    try {
+                        if (fs.statSync(fullPath).isDirectory()) return hit + "/";
+                    } catch { }
+                    return hit;
+                });
+
+                process.stdout.write("\n" + displayHits.join("  ") + "\n");
+                process.stdout.write("$ " + line);
+                lastTabLine = "";
+                return [[], line];
+            }
+
             process.stdout.write("\x07");
+            lastTabLine = line;
+            lastTabTime = now;
+            return [[], line];
+        } catch {
             return [[], line];
         }
     }
 
-    // ==========================================
-    // CASE 2: Command Completion (Builtins + PATH)
-    // ==========================================
+    // CASE 2: Command Completion
     const allCommands = new Set<string>([
         ...BUILTIN_COMMANDS,
         ...getExecutablesFromPath(),
@@ -134,7 +143,6 @@ export function completer(line: string): [string[], string] {
         .sort();
 
     if (hits.length === 0) {
-        process.stdout.write("\x07");
         return [[], line];
     }
 
@@ -145,5 +153,15 @@ export function completer(line: string): [string[], string] {
         return [[lcp], line];
     }
 
-    return [hits, line];
+    if (line === lastTabLine && now - lastTabTime < 500) {
+        process.stdout.write("\n" + hits.join("  ") + "\n");
+        process.stdout.write("$ " + line);
+        lastTabLine = "";
+        return [[], line];
+    }
+
+    process.stdout.write("\x07");
+    lastTabLine = line;
+    lastTabTime = now;
+    return [[], line];
 }

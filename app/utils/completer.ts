@@ -56,18 +56,41 @@ export function completer(line: string): [string[], string] {
                 const lines = stdout
                     .split("\n")
                     .map((l) => l.trim())
-                    .filter((l) => l.length > 0);
+                    .filter((l) => l.length > 0)
+                    .sort();
 
                 if (lines.length === 1) {
-                    // Single match -> complete line with trailing space
+                    lastTabLine = "";
                     const commandPrefix = line.slice(0, lastSpaceIndex + 1);
                     return [[commandPrefix + lines[0] + " "], line];
                 }
+
+                if (lines.length > 1) {
+                    const isSecondTab = line === lastTabLine && now - lastTabTime < 2000;
+
+                    if (isSecondTab) {
+                        process.stdout.write("\n" + lines.join("  ") + "\n");
+                        process.stdout.write("$ " + line);
+                        lastTabLine = "";
+                        return [[], line];
+                    } else {
+                        process.stdout.write("\x07");
+                        lastTabLine = line;
+                        lastTabTime = now;
+                        return [[], line];
+                    }
+                }
+
+                process.stdout.write("\x07");
+                lastTabLine = "";
+                return [[], line];
             } catch {
                 process.stdout.write("\x07");
+                lastTabLine = "";
                 return [[], line];
             }
         }
+
         // ------------------------------------------
         // 1B. Fallback to Default Filesystem Completion
         // ------------------------------------------

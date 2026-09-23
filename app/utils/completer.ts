@@ -35,8 +35,15 @@ export function completer(line: string): [string[], string] {
         // 1A. Registered Completer Script Execution
         // ------------------------------------------
         if (registeredScript) {
+            const words = line.trimStart().split(/\s+/);
+            const cmdName = words[0];
+            const currentWord = line.endsWith(" ") ? "" : words[words.length - 1] || "";
+            const prevWord = line.endsWith(" ")
+                ? words[words.length - 1] || ""
+                : words[words.length - 2] || "";
+
             try {
-                const stdout = execFileSync(registeredScript, {
+                const stdout = execFileSync(registeredScript, [cmdName, currentWord, prevWord], {
                     encoding: "utf-8",
                     stdio: ["ignore", "pipe", "ignore"],
                 });

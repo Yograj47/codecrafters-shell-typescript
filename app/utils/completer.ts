@@ -60,12 +60,23 @@ export function completer(line: string): [string[], string] {
                     .sort();
 
                 if (lines.length === 1) {
+                    // Single match -> complete line with trailing space
                     lastTabLine = "";
                     const commandPrefix = line.slice(0, lastSpaceIndex + 1);
                     return [[commandPrefix + lines[0] + " "], line];
                 }
 
                 if (lines.length > 1) {
+                    const lcp = findLongestCommonPrefix(lines);
+
+                    // If LCP extends current input, complete to LCP without ringing bell
+                    if (lcp.length > currentWord.length) {
+                        lastTabLine = "";
+                        const commandPrefix = line.slice(0, lastSpaceIndex + 1);
+                        return [[commandPrefix + lcp], line];
+                    }
+
+                    // No new characters to add via LCP: handle double TAB list display
                     const isSecondTab = line === lastTabLine && now - lastTabTime < 2000;
 
                     if (isSecondTab) {
@@ -81,6 +92,7 @@ export function completer(line: string): [string[], string] {
                     }
                 }
 
+                // Zero candidates
                 process.stdout.write("\x07");
                 lastTabLine = "";
                 return [[], line];

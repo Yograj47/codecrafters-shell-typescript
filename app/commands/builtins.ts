@@ -6,7 +6,7 @@ import type { RedirectionTarget } from "../utils/redirection";
 
 export const BUILTIN_COMMANDS = ["echo", "type", "pwd", "exit", "cd", "complete"] as const;
 
-const completionRegistry = new Map<string, string>();
+export const completionRegistry = new Map<string, string>();
 
 export function handleEcho(cleanArgs: string[], stdout?: RedirectionTarget): void {
     const textToPrint = cleanArgs.join(" ") + "\n";

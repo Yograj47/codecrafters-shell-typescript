@@ -43,16 +43,17 @@ export function parseRedirections(args: string[]): RedirectionInfo {
 }
 
 export function prepareRedirectionFiles(redirection: RedirectionInfo): void {
-    if (redirection.stdout) {
-        fs.mkdirSync(path.dirname(redirection.stdout.file), { recursive: true });
-        if (!fs.existsSync(redirection.stdout.file)) {
-            fs.writeFileSync(redirection.stdout.file, "");
+    const targets = [redirection.stdout, redirection.stderr].filter(Boolean);
+
+    for (const target of targets) {
+        if (!target) continue;
+        const dir = path.dirname(target.file);
+        if (dir && dir !== ".") {
+            fs.mkdirSync(dir, { recursive: true });
         }
-    }
-    if (redirection.stderr) {
-        fs.mkdirSync(path.dirname(redirection.stderr.file), { recursive: true });
-        if (!fs.existsSync(redirection.stderr.file)) {
-            fs.writeFileSync(redirection.stderr.file, "");
-        }
+
+        const flag = target.mode === "a" ? "a" : "w";
+        const fd = fs.openSync(target.file, flag);
+        fs.closeSync(fd);
     }
 }

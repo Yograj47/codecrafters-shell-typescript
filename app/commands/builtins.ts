@@ -4,7 +4,7 @@ import * as os from "node:os";
 import { searchPath } from "../services/pathResolver";
 import type { RedirectionTarget } from "../utils/redirection";
 
-export const BUILTIN_COMMANDS = ["echo", "type", "pwd", "exit", "cd", "complete"] as const;
+export const BUILTIN_COMMANDS = ["echo", "type", "pwd", "exit", "cd", "complete", "jobs"] as const;
 
 export const completionRegistry = new Map<string, string>();
 
@@ -82,6 +82,8 @@ export function handleComplete(args: string[]): void {
         return;
     }
 }
+
+export function handleJobs(): void { }
 
 export function printError(message: string, stderrFile?: string): void {
     if (stderrFile) {

@@ -15,7 +15,7 @@ const rl = createInterface({
 
 rl.prompt();
 
-rl.on("line", (rawInput) => {
+rl.on("line", async (rawInput) => {
   const line = rawInput.trim();
   if (!line) {
     rl.prompt();
@@ -69,7 +69,7 @@ rl.on("line", (rawInput) => {
 
     default:
       if (searchPath(cmd)) {
-        executeExternal(cmd, redirectionInfo);
+        await executeExternal(cmd, redirectionInfo, isBackground);
       } else {
         console.log(`${line}: command not found`);
       }

@@ -8,7 +8,7 @@ export interface Job {
     status: "Running" | "Done";
 }
 
-const activeJobs: Job[] = [];
+let activeJobs: Job[] = [];
 
 export function addJob(cmd: string, child: ChildProcess): Job {
     const jobId = activeJobs.length + 1;
@@ -20,10 +20,17 @@ export function addJob(cmd: string, child: ChildProcess): Job {
         status: 'Running'
     };
 
+    child.on("exit", () => {
+        job.status = "Done";
+    })
+
     activeJobs.push(job);
     return job;
 }
 
 export function getJobs(): Job[] {
-    return activeJobs;
+    const jobsToPrint = [...activeJobs];
+
+    activeJobs = activeJobs.filter((job) => job.status === 'Running');
+    return jobsToPrint;
 }

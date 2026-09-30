@@ -101,7 +101,9 @@ export function handleJobs(): void {
 
         const statusPadded = job.status.padEnd(24, " ");
 
-        process.stdout.write(`[${job.id}]${marker}  ${statusPadded}${job.command} &\n`);
+        const ampersand = job.status === "Running" ? " &" : "";
+
+        process.stdout.write(`[${job.id}]${marker}  ${statusPadded}${job.command}${ampersand}\n`);
     }
 }
 

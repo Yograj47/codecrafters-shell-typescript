@@ -25,7 +25,19 @@ rl.on("line", (rawInput) => {
   // 1. Tokenize input
   const rawTokens = parseToken(line);
 
-  // 2. Separate command args from redirection flags (> and 2>)
+  // 2. Check if the command should run in the backgroune (&)
+  let isBackground = false;
+  if (rawTokens.length > 0 && rawTokens[rawTokens.length - 1] === "&") {
+    isBackground = true;
+    rawTokens.pop();
+  }
+
+  if (rawTokens.length === 0) {
+    rl.prompt();
+    return;
+  }
+
+  // 3. Separate command args from redirection flags (> and 2>)
   const cmd = rawTokens[0];
   const redirectionInfo = parseRedirections(rawTokens.slice(1));
 
@@ -62,7 +74,7 @@ rl.on("line", (rawInput) => {
 
     default:
       if (searchPath(cmd)) {
-        executeExternal(cmd, redirectionInfo);
+        executeExternal(cmd, redirectionInfo, isBackground);
       } else {
         console.log(`${line}: command not found`);
       }

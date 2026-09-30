@@ -32,11 +32,6 @@ rl.on("line", (rawInput) => {
     rawTokens.pop();
   }
 
-  if (rawTokens.length === 0) {
-    rl.prompt();
-    return;
-  }
-
   // 3. Separate command args from redirection flags (> and 2>)
   const cmd = rawTokens[0];
   const redirectionInfo = parseRedirections(rawTokens.slice(1));

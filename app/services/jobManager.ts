@@ -5,6 +5,7 @@ export interface Job {
     pid: number;
     command: string;
     process: ChildProcess;
+    status: "Running" | "Done";
 }
 
 const activeJobs: Job[] = [];
@@ -16,6 +17,7 @@ export function addJob(cmd: string, child: ChildProcess): Job {
         pid: child.pid!,
         command: cmd,
         process: child,
+        status: 'Running'
     };
 
     activeJobs.push(job);

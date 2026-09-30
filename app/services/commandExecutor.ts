@@ -41,15 +41,14 @@ export function executeExternal(
             };
 
             if (isBackground) {
-                const fullCmd = [cmd, ...cleanArgs].join(" ");
+                const fullCmd = cleanArgs.length > 0 ? `${cmd} ${cleanArgs.join(" ")}` : cmd;
                 const job = addJob(fullCmd, child);
                 process.stdout.write(`[${job.id}] ${child.pid}\n`);
 
-                // Close parent descriptors after child process exits in background
                 child.on("close", cleanup);
                 child.on("error", cleanup);
 
-                resolve(); // Return instantly so prompt prints right away for background job
+                resolve();
             } else {
                 child.on("close", () => {
                     cleanup();

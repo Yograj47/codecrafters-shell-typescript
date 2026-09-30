@@ -3,6 +3,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { searchPath } from "../services/pathResolver";
 import type { RedirectionTarget } from "../utils/redirection";
+import { getJobs } from "../services/jobManager";
 
 export const BUILTIN_COMMANDS = ["echo", "type", "pwd", "exit", "cd", "complete", "jobs"] as const;
 
@@ -83,7 +84,20 @@ export function handleComplete(args: string[]): void {
     }
 }
 
-export function handleJobs(): void { }
+export function handleJobs(): void {
+    const jobs = getJobs();
+
+    for (let i = 0; i < jobs.length; i++) {
+        const job = jobs[i];
+
+        const statusPadded = job.status.padEnd(24, " ");
+
+        // '+' marker for the most recent job
+        const marker = i === jobs.length - 1 ? "+" : "-";
+
+        process.stdout.write(`[${job.id}]${marker}  ${statusPadded}${job.command} &\n`);
+    }
+}
 
 export function printError(message: string, stderrFile?: string): void {
     if (stderrFile) {

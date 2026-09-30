@@ -1,9 +1,8 @@
-import { execFileSync, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { RedirectionInfo } from "../utils/redirection";
 import { addJob } from "./jobManager";
-import { resolve } from "node:dns";
 
 export function executeExternal(
     cmd: string,
@@ -28,21 +27,33 @@ export function executeExternal(
                 stdio: ["inherit", stdoutFd, stderrFd],
             });
 
+            // Track if cleanup was already executed to prevent double closing EBADF errors
+            let cleanedUp = false;
             const cleanup = () => {
-                if (typeof stdoutFd === "number") fs.closeSync(stdoutFd);
-                if (typeof stderrFd === "number") fs.closeSync(stderrFd);
-            }
+                if (cleanedUp) return;
+                cleanedUp = true;
+                if (typeof stdoutFd === "number") {
+                    try { fs.closeSync(stdoutFd); } catch { }
+                }
+                if (typeof stderrFd === "number") {
+                    try { fs.closeSync(stderrFd); } catch { }
+                }
+            };
 
             if (isBackground) {
                 const fullCmd = [cmd, ...cleanArgs].join(" ");
                 const job = addJob(fullCmd, child);
                 process.stdout.write(`[${job.id}] ${child.pid}\n`);
-                cleanup();
-                resolve();
+
+                // Close parent descriptors after child process exits in background
+                child.on("close", cleanup);
+                child.on("error", cleanup);
+
+                resolve(); // Return instantly so prompt prints right away for background job
             } else {
                 child.on("close", () => {
                     cleanup();
-                    resolve();
+                    resolve(); // Resolve only after foreground job finishes completely
                 });
 
                 child.on("error", () => {
@@ -51,10 +62,12 @@ export function executeExternal(
                 });
             }
         } catch {
-            // Process error output is written automatically to stderrFd
-        } finally {
-            if (typeof stdoutFd === "number") fs.closeSync(stdoutFd);
-            if (typeof stderrFd === "number") fs.closeSync(stderrFd);
+            if (typeof stdoutFd === "number") {
+                try { fs.closeSync(stdoutFd); } catch { }
+            }
+            if (typeof stderrFd === "number") {
+                try { fs.closeSync(stderrFd); } catch { }
+            }
             resolve();
         }
     });

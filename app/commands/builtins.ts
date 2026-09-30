@@ -86,14 +86,20 @@ export function handleComplete(args: string[]): void {
 
 export function handleJobs(): void {
     const jobs = getJobs();
+    const count = jobs.length;
 
     for (let i = 0; i < jobs.length; i++) {
         const job = jobs[i];
 
-        const statusPadded = job.status.padEnd(24, " ");
+        let marker = "";
 
-        // '+' marker for the most recent job
-        const marker = i === jobs.length - 1 ? "+" : "-";
+        if (i === count - 1) {
+            marker = "+";
+        } else if (i === count - 2) {
+            marker = "-";
+        }
+
+        const statusPadded = job.status.padEnd(24, " ");
 
         process.stdout.write(`[${job.id}]${marker}  ${statusPadded}${job.command} &\n`);
     }

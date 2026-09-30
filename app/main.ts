@@ -5,6 +5,7 @@ import { searchPath } from "./services/pathResolver";
 import { executeExternal } from "./services/commandExecutor";
 import { handleEcho, handleType, handleCd, handleComplete, handleJobs } from "./commands/builtins";
 import { completer } from "./utils/completer";
+import { reapCompletedJobs } from "./services/jobManager";
 
 const rl = createInterface({
   input: process.stdin,
@@ -13,12 +14,18 @@ const rl = createInterface({
   completer: completer
 });
 
-rl.prompt();
+function promptNext(): void {
+  reapCompletedJobs();
+  rl.prompt();
+}
+
+promptNext();
 
 rl.on("line", async (rawInput) => {
   const line = rawInput.trim();
+
   if (!line) {
-    rl.prompt();
+    promptNext();
     return;
   }
 
@@ -76,5 +83,5 @@ rl.on("line", async (rawInput) => {
       break;
   }
 
-  rl.prompt();
+  promptNext();
 });

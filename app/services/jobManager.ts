@@ -34,3 +34,29 @@ export function getJobs(): Job[] {
     activeJobs = activeJobs.filter((job) => job.status === 'Running');
     return jobsToPrint;
 }
+
+export function reapCompletedJobs(): void {
+    const doneJobs = activeJobs.filter((job) => job.status === "Done");
+
+    if (doneJobs.length === 0) return;
+
+    for (const doneJob of doneJobs) {
+        const index = activeJobs.indexOf(doneJob);
+        const count = activeJobs.length;
+
+        let marker = " ";
+        if (index === count - 1) {
+            marker = "+";
+        } else if (index === count - 2) {
+            marker = "-";
+        }
+
+        const statusPadded = doneJob.status.padEnd(24, " ");
+
+        process.stdout.write(
+            `[${doneJob.id}]${marker}  ${statusPadded}${doneJob.command}\n`
+        );
+    }
+
+    activeJobs = activeJobs.filter((job) => job.status === "Running");
+}

@@ -69,7 +69,7 @@ rl.on("line", (rawInput) => {
 
     default:
       if (searchPath(cmd)) {
-        executeExternal(cmd, redirectionInfo, isBackground);
+        executeExternal(cmd, redirectionInfo);
       } else {
         console.log(`${line}: command not found`);
       }

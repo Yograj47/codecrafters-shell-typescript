@@ -11,7 +11,11 @@ export interface Job {
 let activeJobs: Job[] = [];
 
 export function addJob(cmd: string, child: ChildProcess): Job {
-    const jobId = activeJobs.length + 1;
+    const maxId = activeJobs.length > 0
+        ? Math.max(...activeJobs.map((j) => j.id))
+        : 0;
+    const jobId = maxId + 1;
+
     const job: Job = {
         id: jobId,
         pid: child.pid!,

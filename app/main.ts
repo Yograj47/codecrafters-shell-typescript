@@ -6,6 +6,7 @@ import { executeExternal } from "./services/commandExecutor";
 import { handleEcho, handleType, handleCd, handleComplete, handleJobs } from "./commands/builtins";
 import { completer } from "./utils/completer";
 import { reapCompletedJobs } from "./services/jobManager";
+import { executePipeline } from "./services/pipelineExecutor";
 
 const rl = createInterface({
   input: process.stdin,
@@ -31,6 +32,16 @@ rl.on("line", async (rawInput) => {
 
   // 1. Tokenize input
   const rawTokens = parseToken(line);
+
+  const pipeIndex = rawTokens.indexOf("|");
+  if (pipeIndex !== -1) {
+    const leftTokens = rawTokens.slice(0, pipeIndex);
+    const rightTokens = rawTokens.slice(pipeIndex + 1);
+
+    await executePipeline(leftTokens, rightTokens);
+    promptNext();
+    return;
+  }
 
   // 2. Check if the command should run in the backgroune (&)
   let isBackground = false;

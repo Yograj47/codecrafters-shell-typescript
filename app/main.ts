@@ -33,12 +33,26 @@ rl.on("line", async (rawInput) => {
   // 1. Tokenize input
   const rawTokens = parseToken(line);
 
-  const pipeIndex = rawTokens.indexOf("|");
-  if (pipeIndex !== -1) {
-    const leftTokens = rawTokens.slice(0, pipeIndex);
-    const rightTokens = rawTokens.slice(pipeIndex + 1);
+  const stages: string[][] = [];
+  let currentStage: string[] = [];
 
-    await executePipeline(leftTokens, rightTokens);
+  for (const token of rawTokens) {
+    if (token === "|") {
+      if (currentStage.length > 0) {
+        stages.push(currentStage);
+        currentStage = [];
+      }
+    } else {
+      currentStage.push(token);
+    }
+  }
+
+  if (currentStage.length > 0) {
+    stages.push(currentStage);
+  }
+
+  if (stages.length > 1) {
+    await executePipeline(stages);
     promptNext();
     return;
   }

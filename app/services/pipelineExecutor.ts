@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { parseRedirections, prepareRedirectionFiles } from "../utils/redirection";
 import { BUILTIN_COMMANDS, runBuiltinToString } from "../commands/builtins";
 
@@ -6,104 +6,76 @@ function isBuiltin(cmd: string): boolean {
     return BUILTIN_COMMANDS.includes(cmd as any);
 }
 
-export async function executePipeline(
-    leftTokens: string[],
-    rightTokens: string[]
-): Promise<void> {
-    const leftRedir = parseRedirections(leftTokens.slice(1));
-    const rightRedir = parseRedirections(rightTokens.slice(1));
+export async function executePipeline(stages: string[][]): Promise<void> {
+    const processes: ChildProcess[] = [];
 
-    prepareRedirectionFiles(leftRedir);
-    prepareRedirectionFiles(rightRedir);
-
-    const leftCmd = leftTokens[0];
-    const leftArgs = leftRedir.cleanArgs;
-
-    const rightCmd = rightTokens[0];
-    const rightArgs = rightRedir.cleanArgs;
-
-    const isLeftBuiltin = isBuiltin(leftCmd);
-    const isRightBuiltin = isBuiltin(rightCmd);
-
-    // Case 1: Built-in | External (e.g., echo apple-orange | wc)
-    if (isLeftBuiltin && !isRightBuiltin) {
-        return new Promise((resolve, reject) => {
-            const p2 = spawn(rightCmd, rightArgs, {
-                stdio: ["pipe", "inherit", "inherit"],
-            });
-
-            const output = runBuiltinToString(leftCmd, leftArgs);
-
-            if (p2.stdin) {
-                p2.stdin.write(output);
-                p2.stdin.end(); // EOF tells p2 no more input is coming
-            }
-
-            p2.on("close", resolve);
-            p2.on("error", reject);
-        });
-    }
-
-    // Case 2: External | Built-in (e.g., ls | type exit)
-    if (!isLeftBuiltin && isRightBuiltin) {
-        return new Promise((resolve, reject) => {
-            const p1 = spawn(leftCmd, leftArgs, {
-                stdio: ["inherit", "ignore", "inherit"], // Ignores p1 stdout
-            });
-
-            const output = runBuiltinToString(rightCmd, rightArgs);
-            if (output) {
-                process.stdout.write(output);
-            }
-
-            p1.on("close", resolve);
-            p1.on("error", reject);
-        });
-    }
-
-    // Case 3: Built-in | Built-in (e.g., echo hello | type exit)
-    if (isLeftBuiltin && isRightBuiltin) {
-        const output = runBuiltinToString(rightCmd, rightArgs);
-        if (output) {
-            process.stdout.write(output);
-        }
-        return;
-    }
-
-    // Case 4: External | External (e.g., cat file | wc)
     return new Promise((resolve, reject) => {
-        const p1 = spawn(leftCmd, leftArgs, {
-            stdio: ["inherit", "pipe", "inherit"],
-        });
+        let previousOutput: any = null; // Stream or string output from previous stage
 
-        const p2 = spawn(rightCmd, rightArgs, {
-            stdio: ["pipe", "inherit", "inherit"],
-        });
+        for (let i = 0; i < stages.length; i++) {
+            const stageTokens = stages[i];
+            const redirectionInfo = parseRedirections(stageTokens.slice(1));
+            prepareRedirectionFiles(redirectionInfo);
 
-        if (p1.stdout && p2.stdin) {
-            p1.stdout.pipe(p2.stdin);
-        }
+            const cmd = stageTokens[0];
+            const args = redirectionInfo.cleanArgs;
+            const isLast = i === stages.length - 1;
+            const stageIsBuiltin = isBuiltin(cmd);
 
-        let p1Done = false;
-        let p2Done = false;
+            if (stageIsBuiltin) {
+                const builtinOutput = runBuiltinToString(cmd, args);
 
-        function checkDone() {
-            if (p1Done && p2Done) {
-                resolve();
+                if (isLast) {
+                    if (builtinOutput) {
+                        process.stdout.write(builtinOutput);
+                    }
+                } else {
+                    // Pass string output as input for the next stage
+                    previousOutput = builtinOutput;
+                }
+            } else {
+                // External process execution
+                const stdinSetting = previousOutput ? "pipe" : "inherit";
+                const stdoutSetting = isLast ? "inherit" : "pipe";
+
+                const proc = spawn(cmd, args, {
+                    stdio: [stdinSetting, stdoutSetting, "inherit"],
+                });
+
+                processes.push(proc);
+
+                // Connect previous stage output to current process stdin
+                if (previousOutput) {
+                    if (typeof previousOutput === "string") {
+                        if (proc.stdin) {
+                            proc.stdin.write(previousOutput);
+                            proc.stdin.end();
+                        }
+                    } else if (proc.stdin) {
+                        previousOutput.pipe(proc.stdin);
+                    }
+                }
+
+                previousOutput = proc.stdout;
             }
         }
 
-        p1.on("close", () => {
-            p1Done = true;
-            checkDone();
-        });
+        // If no external processes were spawned (e.g., echo hi | type exit), resolve immediately
+        if (processes.length === 0) {
+            resolve();
+            return;
+        }
 
-        p2.on("close", () => {
-            p2Done = true;
-            checkDone();
-        });
-
-        p1.on("error", reject);
-        p2.on("error", reject);
+        // Wait for all spawned processes to close
+        let completedCount = 0;
+        for (const proc of processes) {
+            proc.on("close", () => {
+                completedCount++;
+                if (completedCount === processes.length) {
+                    resolve();
+                }
+            });
+            proc.on("error", reject);
+        }
     });
 }

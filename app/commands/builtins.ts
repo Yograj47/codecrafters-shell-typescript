@@ -114,3 +114,51 @@ export function printError(message: string, stderrFile?: string): void {
         process.stderr.write(message + "\n");
     }
 }
+
+/**
+ * Executes a built-in command and returns its string output.
+ * Used when built-ins are producers or consumers inside a pipeline.
+ */
+export function runBuiltinToString(cmd: string, args: string[]): string {
+    switch (cmd) {
+        case "echo":
+            return args.join(" ") + "\n";
+
+        case "pwd":
+            return process.cwd() + "\n";
+
+        case "type": {
+            const target = args[0] || "";
+            if (BUILTIN_COMMANDS.includes(target as any)) {
+                return `${target} is a shell builtin\n`;
+            }
+            const matchPath = searchPath(target);
+            if (matchPath) {
+                return `${target} is ${matchPath}\n`;
+            }
+            return `${target}: not found\n`;
+        }
+
+        case "jobs": {
+            const jobs = getJobs();
+            const count = jobs.length;
+            let output = "";
+
+            for (let i = 0; i < jobs.length; i++) {
+                const job = jobs[i];
+                let marker = "";
+                if (i === count - 1) marker = "+";
+                else if (i === count - 2) marker = "-";
+
+                const statusPadded = job.status.padEnd(24, " ");
+                const ampersand = job.status === "Running" ? " &" : "";
+
+                output += `[${job.id}]${marker}  ${statusPadded}${job.command}${ampersand}\n`;
+            }
+            return output;
+        }
+
+        default:
+            return "";
+    }
+}

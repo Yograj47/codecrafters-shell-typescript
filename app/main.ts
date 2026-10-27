@@ -3,11 +3,11 @@ import { parseToken } from "./utils/tokenizer";
 import { parseRedirections, prepareRedirectionFiles } from "./utils/redirection";
 import { searchPath } from "./services/pathResolver";
 import { executeExternal } from "./services/commandExecutor";
-import { handleEcho, handleType, handleCd, handleComplete, handleJobs } from "./commands/builtins";
+import { handleEcho, handleType, handleCd, handleComplete, handleJobs, handleHistory } from "./commands/builtins";
 import { completer } from "./utils/completer";
 import { reapCompletedJobs } from "./services/jobManager";
 import { executePipeline } from "./services/pipelineExecutor";
-import { addHistory, getHistory } from "./services/historyManager";
+import { addHistory } from "./services/historyManager";
 
 const rl = createInterface({
   input: process.stdin,
@@ -102,15 +102,9 @@ rl.on("line", async (rawInput) => {
       handleJobs();
       break;
 
-    case "history": {
-      const history = getHistory();
-      let output = "";
-      for (let i = 0; i < history.length; i++) {
-        const indexStr = String(i + 1).padStart(5, " ");
-        output += `${indexStr}  ${history[i]}\n`;
-      }
-      return output;
-    }
+    case "history":
+      handleHistory(redirectionInfo.cleanArgs, redirectionInfo.stdout);
+      break;
 
     default:
       if (searchPath(cmd)) {

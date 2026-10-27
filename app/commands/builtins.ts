@@ -166,10 +166,22 @@ export function runBuiltinToString(cmd: string, args: string[]): string {
 
 export function handleHistory(cleanArgs: string[], stdout?: RedirectionTarget): void {
     const history = getHistory();
-    let output = "";
+    let entriesToDisplay = history;
 
-    // By default, list all history entries with 5-space padding and 2-space gap
-    for (let i = 0; i < history.length; i++) {
+    if (cleanArgs.length > 0) {
+        const limit = parseInt(cleanArgs[0], 10);
+        if (!isNaN(limit) && limit > 0) {
+            const startIndex = Math.max(0, history.length - limit);
+            // We want to slice from startIndex to the end, but keep their original indices
+        }
+    }
+
+    let output = "";
+    const startIndex = cleanArgs.length > 0 && !isNaN(parseInt(cleanArgs[0], 10))
+        ? Math.max(0, history.length - parseInt(cleanArgs[0], 10))
+        : 0;
+
+    for (let i = startIndex; i < history.length; i++) {
         const indexStr = String(i + 1).padStart(5, " ");
         output += `${indexStr}  ${history[i]}\n`;
     }

@@ -7,7 +7,7 @@ import { handleEcho, handleType, handleCd, handleComplete, handleJobs } from "./
 import { completer } from "./utils/completer";
 import { reapCompletedJobs } from "./services/jobManager";
 import { executePipeline } from "./services/pipelineExecutor";
-import { getHistory } from "./services/historyManager";
+import { addHistory, getHistory } from "./services/historyManager";
 
 const rl = createInterface({
   input: process.stdin,
@@ -30,6 +30,8 @@ rl.on("line", async (rawInput) => {
     promptNext();
     return;
   }
+
+  addHistory(line);
 
   // 1. Tokenize input
   const rawTokens = parseToken(line);

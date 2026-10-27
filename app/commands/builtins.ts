@@ -4,8 +4,9 @@ import * as os from "node:os";
 import { searchPath } from "../services/pathResolver";
 import type { RedirectionTarget } from "../utils/redirection";
 import { getJobs } from "../services/jobManager";
+import { getHistory } from "../services/historyManager";
 
-export const BUILTIN_COMMANDS = ["echo", "type", "pwd", "exit", "cd", "complete", "jobs"] as const;
+export const BUILTIN_COMMANDS = ["echo", "type", "pwd", "exit", "cd", "complete", "jobs", "history"] as const;
 
 export const completionRegistry = new Map<string, string>();
 
@@ -160,5 +161,26 @@ export function runBuiltinToString(cmd: string, args: string[]): string {
 
         default:
             return "";
+    }
+}
+
+export function handleHistory(cleanArgs: string[], stdout?: RedirectionTarget): void {
+    const history = getHistory();
+    let output = "";
+
+    // By default, list all history entries with 5-space padding and 2-space gap
+    for (let i = 0; i < history.length; i++) {
+        const indexStr = String(i + 1).padStart(5, " ");
+        output += `${indexStr}  ${history[i]}\n`;
+    }
+
+    if (stdout) {
+        if (stdout.mode === "a") {
+            fs.appendFileSync(stdout.file, output);
+        } else {
+            fs.writeFileSync(stdout.file, output);
+        }
+    } else {
+        process.stdout.write(output);
     }
 }

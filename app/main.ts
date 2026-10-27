@@ -7,6 +7,7 @@ import { handleEcho, handleType, handleCd, handleComplete, handleJobs } from "./
 import { completer } from "./utils/completer";
 import { reapCompletedJobs } from "./services/jobManager";
 import { executePipeline } from "./services/pipelineExecutor";
+import { getHistory } from "./services/historyManager";
 
 const rl = createInterface({
   input: process.stdin,
@@ -98,6 +99,16 @@ rl.on("line", async (rawInput) => {
     case "jobs":
       handleJobs();
       break;
+
+    case "history": {
+      const history = getHistory();
+      let output = "";
+      for (let i = 0; i < history.length; i++) {
+        const indexStr = String(i + 1).padStart(5, " ");
+        output += `${indexStr}  ${history[i]}\n`;
+      }
+      return output;
+    }
 
     default:
       if (searchPath(cmd)) {

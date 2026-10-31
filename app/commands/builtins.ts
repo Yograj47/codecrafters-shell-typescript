@@ -4,7 +4,7 @@ import * as os from "node:os";
 import { searchPath } from "../services/pathResolver";
 import type { RedirectionTarget } from "../utils/redirection";
 import { getJobs } from "../services/jobManager";
-import { getHistory } from "../services/historyManager";
+import { getHistory, addHistory } from "../services/historyManager";
 
 export const BUILTIN_COMMANDS = ["echo", "type", "pwd", "exit", "cd", "complete", "jobs", "history"] as const;
 
@@ -117,6 +117,46 @@ export function printError(message: string, stderrFile?: string): void {
 }
 
 /**
+ * Core helper function for history commands: handles -r file reading and listing/limiting.
+ */
+function processHistoryCommand(args: string[]): string {
+    if (args.length >= 2 && args[0] === "-r") {
+        const filePath = args[1];
+        try {
+            if (fs.existsSync(filePath)) {
+                const fileContent = fs.readFileSync(filePath, "utf-8");
+                const lines = fileContent.split(/\r?\n/);
+                for (const line of lines) {
+                    if (line.trim()) {
+                        addHistory(line);
+                    }
+                }
+            }
+        } catch {
+            // Handle error silently or log if required
+        }
+        return "";
+    }
+
+    const history = getHistory();
+    let startIndex = 0;
+
+    if (args.length > 0) {
+        const limit = parseInt(args[0], 10);
+        if (!isNaN(limit) && limit > 0) {
+            startIndex = Math.max(0, history.length - limit);
+        }
+    }
+
+    let output = "";
+    for (let i = startIndex; i < history.length; i++) {
+        const indexStr = String(i + 1).padStart(5, " ");
+        output += `${indexStr}  ${history[i]}\n`;
+    }
+    return output;
+}
+
+/**
  * Executes a built-in command and returns its string output.
  * Used when built-ins are producers or consumers inside a pipeline.
  */
@@ -159,31 +199,19 @@ export function runBuiltinToString(cmd: string, args: string[]): string {
             return output;
         }
 
+        case "history":
+            return processHistoryCommand(args);
+
         default:
             return "";
     }
 }
 
 export function handleHistory(cleanArgs: string[], stdout?: RedirectionTarget): void {
-    const history = getHistory();
-    let entriesToDisplay = history;
+    const output = processHistoryCommand(cleanArgs);
 
-    if (cleanArgs.length > 0) {
-        const limit = parseInt(cleanArgs[0], 10);
-        if (!isNaN(limit) && limit > 0) {
-            const startIndex = Math.max(0, history.length - limit);
-            // We want to slice from startIndex to the end, but keep their original indices
-        }
-    }
-
-    let output = "";
-    const startIndex = cleanArgs.length > 0 && !isNaN(parseInt(cleanArgs[0], 10))
-        ? Math.max(0, history.length - parseInt(cleanArgs[0], 10))
-        : 0;
-
-    for (let i = startIndex; i < history.length; i++) {
-        const indexStr = String(i + 1).padStart(5, " ");
-        output += `${indexStr}  ${history[i]}\n`;
+    if (!output && cleanArgs.length >= 2 && cleanArgs[0] === "-r") {
+        return; // -r doesn't produce stdout output
     }
 
     if (stdout) {

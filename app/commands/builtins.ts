@@ -150,6 +150,19 @@ function processHistoryCommand(args: string[]): string {
         return "";
     }
 
+    if (args.length >= 2 && args[0] === "-a") {
+        const filePath = args[1];
+        try {
+            const history = getHistory();
+            const content = history.join("\n") + "\n";
+            fs.appendFileSync(filePath, content, "utf-8");
+        } catch {
+            // Handle error silently or log if required
+        }
+        return "";
+    }
+
+
     const history = getHistory();
     let startIndex = 0;
 

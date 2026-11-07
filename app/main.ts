@@ -1,3 +1,6 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
+import * as os from "node:os";
 import { createInterface } from "node:readline";
 import { parseToken } from "./utils/tokenizer";
 import { parseRedirections, prepareRedirectionFiles } from "./utils/redirection";
@@ -7,7 +10,41 @@ import { handleEcho, handleType, handleCd, handleComplete, handleJobs, handleHis
 import { completer } from "./utils/completer";
 import { reapCompletedJobs } from "./services/jobManager";
 import { executePipeline } from "./services/pipelineExecutor";
-import { addHistory } from "./services/historyManager";
+import { addHistory, getHistory } from "./services/historyManager";
+
+// Determine history file path (standard POSIX convention)
+const histFile = process.env.HISTFILE || path.join(os.homedir(), ".bash_history");
+
+// Read history on startup
+try {
+  if (fs.existsSync(histFile)) {
+    const fileContent = fs.readFileSync(histFile, "utf-8");
+    const lines = fileContent.split(/\r?\n/);
+    for (const line of lines) {
+      if (line.trim()) {
+        addHistory(line);
+      }
+    }
+  }
+} catch {
+  // Fail silently if permissions or file issues occur
+}
+
+// Helper to save history on exit
+function saveHistoryOnExit(mode: "write" | "append" = "write") {
+  try {
+    const history = getHistory();
+    const content = history.join("\n") + "\n";
+
+    if (mode === "append") {
+      fs.appendFileSync(histFile, content, "utf-8");
+    } else {
+      fs.writeFileSync(histFile, content, "utf-8");
+    }
+  } catch {
+    // Fail silently
+  }
+}
 
 const rl = createInterface({
   input: process.stdin,
@@ -15,6 +52,11 @@ const rl = createInterface({
   prompt: "$ ",
   completer: completer
 });
+
+rl.on("close", () => {
+  saveHistoryOnExit("write");
+  process.exit(0);
+})
 
 function promptNext(): void {
   reapCompletedJobs();
@@ -105,6 +147,10 @@ rl.on("line", async (rawInput) => {
     case "history":
       handleHistory(redirectionInfo.cleanArgs, redirectionInfo.stdout);
       break;
+
+    case "exit":
+      saveHistoryOnExit("write");
+      process.exit(0);
 
     default:
       if (searchPath(cmd)) {
